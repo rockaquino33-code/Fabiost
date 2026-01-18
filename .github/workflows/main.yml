@@ -1,1 +1,25 @@
+name: Limpeza_Forense_Final
+on:
+  workflow_dispatch:
+
+jobs:
+  processar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Isolar_Vozes_e_Gritos
+        run: |
+          # Foca nos gritos e vozes masculinas, removendo estalos e chuva
+          ffmpeg -i "Gente no teto .m4a" -af "highpass=f=200, lowpass=f=3000, afftdn=nr=20:nf=-30, volume=15.0" "RESULTADO_FINAL.m4a"
+
+      - name: Baixar_Resultado
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-limpa
+          path: RESULTADO_FINAL.m4a
 
