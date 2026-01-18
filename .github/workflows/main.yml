@@ -1,25 +1,29 @@
-name: Limpeza_Forense_Final
-on:
-  workflow_dispatch:
+async monitorAudio() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const analyzer = audioContext.createAnalyser();
+  const source = audioContext.createMediaStreamSource(stream);
 
-jobs:
-  processar:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  // FILTRO PASSA-ALTA (Isola sussurros e corta ruídos graves de vento/chuva)
+  const filter = audioContext.createBiquadFilter();
+  filter.type = "highpass";
+  filter.frequency.value = 300; // Frequência onde o sussurro humano é mais nítido
 
-      - name: Instalar FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+  source.connect(filter);
+  filter.connect(analyzer);
 
-      - name: Isolar_Vozes_e_Gritos
-        run: |
-          # Foca nos gritos e vozes masculinas, removendo estalos e chuva
-          ffmpeg -i "Gente no teto .m4a" -af "highpass=f=200, lowpass=f=3000, afftdn=nr=20:nf=-30, volume=15.0" "RESULTADO_FINAL.m4a"
+  const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+  
+  const checkVoice = () => {
+    analyzer.getByteFrequencyData(dataArray);
+    const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
 
-      - name: Baixar_Resultado
-        uses: actions/upload-artifact@v4
-        with:
-          name: evidencia-limpa
-          path: RESULTADO_FINAL.m4a
-
+    // Se detectar som na frequência de voz, ativa alerta visual
+    if (volume > 50) { 
+      document.getElementById("status").innerHTML = "<span class='red-text'>🎙️ ATIVIDADE DE VOZ DETECTADA</span>";
+      this.triggerSecurityAlert(); 
+    }
+    requestAnimationFrame(checkVoice);
+  };
+  checkVoice();
+}
